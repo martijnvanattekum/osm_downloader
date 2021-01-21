@@ -3,7 +3,9 @@
 ############ INIT ################
 suppressPackageStartupMessages({
   library(rvest)
-  library(tidyverse)
+  library(dplyr)
+  library(purrr)
+  library(stringr)
   library(optparse)
 })
 

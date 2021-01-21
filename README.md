@@ -1,6 +1,15 @@
 # OSM map tools
 Tools to download, process and copy osm maps, altitute lines and hillshades. 
 
+# Requirements
+An installation of R (with Rscript executable) >3.6 and the following installed packages:
+
+* rvest
+* dplyr
+* purrr
+* stringr
+* optparse
+
 # Usage
 The following scripts can be used
 

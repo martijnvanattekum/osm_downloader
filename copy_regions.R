@@ -13,68 +13,6 @@
 library(rvest)
 library(tidyverse)
 
-############ PARAMS ################
-maps_index <- "http://download.osmand.net/rawindexes/"
-srtm_index <- "http://builder.osmand.net/srtm-countries/"
-hillshade_index <- "http://fides.fe.uni-lj.si/~arpadb/osmand/"
-
-############ FUNCTIONS ################
-#downloads file. If zip: by default also extracts the file, then deletes the zip file
-safe_dl <- safely(function(link_prefix, mapfile, downloadfolder, extract = TRUE){
-  
-  #create downloaddir and define destination names
-  if (!dir.exists(downloadfolder)) dir.create(downloadfolder)
-  dest_file <- paste0(downloadfolder, mapfile) #dest file
-  dest_file_unzipped <- str_sub(dest_file, 1, -5) #dest_file without zip extension
-  
-  #download the file
-  if (file.exists(dest_file) || file.exists(dest_file_unzipped)) {
-  cat(paste0(dest_file, " already exists, SKIPPING!\n"))} else {
-  cat(paste0("Downloading to file ", dest_file))
-  download.file(url = paste0(link_prefix, mapfile),
-                destfile = dest_file,
-                method = "auto", 
-                cacheOK = TRUE,
-                quiet = TRUE)
-    if (file.exists(dest_file)) {
-      cat(" -- FINISHED!\n")} else {cat(" -- FAILED!\n")}
-    }
-  
-  #unzip the file
-  if (str_detect(mapfile, "\\.zip$") && (file.exists(dest_file)) && extract){
-    cat(paste0(" -> Starting unzip of ", mapfile))
-    unzip(zipfile = dest_file, exdir = str_sub(downloadfolder, 1, -2)) # remove trailing slash to avoid error
-    unlink(x = dest_file)
-    if (file.exists(dest_file_unzipped)) {
-      cat(" -- FINISHED!\n")} else {cat(" -- FAILED!\n")}
-  }
-}
-)
-
-# retrieve files that failed from the "safely" results object
-which_failed <- function(res_obj) {
-  res_obj %>% 
-    transpose %>%
-    .$error %>% 
-    .[!sapply(., is.null)] %>% 
-    map_chr(1) %>% 
-    str_extract("file=.+$") %>% 
-    str_remove("file=")
-}
-
-sort_by_region <- function(sortdir, regions) {
-  files <- list.files(sortdir)
-  
-  walk(regions, function(region){
-    regiondir <- paste(sortdir, region, sep="/")
-    if (!dir.exists(regiondir)) dir.create(regiondir)
-    files_to_move <- files[str_detect(files, region)]
-    walk(files_to_move, function(fl){
-      file.rename(paste(sortdir, fl, sep="/"), paste(sortdir, region, fl, sep="/"))
-    })
-  })
-}
-
 # copy maps/contours/hillshades from source dir recursively to dest
 # only taking files from region(s) of interest (either countries or continents).
 copy_data <- function(src, dest, regions) {

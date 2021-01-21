@@ -1,12 +1,39 @@
 #bulk downloads osm maps, contour and hillshade files
 
 ############ INIT ################
-library(rvest)
-library(tidyverse)
+suppressPackageStartupMessages({
+  library(rvest)
+  library(tidyverse)
+  library(optparse)
+})
 
-setwd("/Volumes/D/Google Drive/CODE/repos/osm_downloader")
-regions_of_interest <- readLines("regions.txt")
+############ CLA PARSING ################
+option_list <- list( 
+  make_option(c("-r", "--all-regions"), action="store_true", default=FALSE,
+              help="Ignore regions.txt and download all regions"),
+  make_option(c("-m", "--no-maps"), action="store_true", default=FALSE,
+              help="Do not download the map files"),
+  make_option(c("-c", "--no-contours"), action="store_true", default=FALSE,
+              help="Do not download the altitude lines files"),
+  make_option(c("-t", "--no-hillshade"), action="store_true", default=FALSE,
+              help="Do not download the hillshade files"),
+  make_option(c("-l", "--local-dir"), type="character", default="./", 
+              help="The local directory to which to download the files. Defaults to current directory")
+)
 
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
+
+file_types <- c("maps", "srtm", "tiles") %>% 
+  .[c(!opt[["no-maps"]], !opt[["no-contours"]], !opt[["no-hillshade"]])] %>% 
+  set_names()
+
+if (!opt[["all-regions"]]) regions_of_interest <- readLines("regions.txt") else regions_of_interest <- NULL
+
+stopifnot(FALSE)
+
+local_root_folder <- opt["local-dir"]
+local_root_folder <- "~/OSMtemp/" #for testing
 ############ CONTANTS ################
 # the convention that osm uses
 file_type_suffixes <- c(
@@ -31,18 +58,18 @@ remote_prefixes <- c(
 
 ############ FUNCTIONS ################
 #downloads file. If zip: by default also extracts the file, then deletes the zip file
-safe_dl <- safely(function(link_prefix, mapfile, downloadfolder, extract = TRUE){
+safe_dl <- safely(function(link_prefix, basename, downloadfolder, extract = TRUE){
   
   #create downloaddir and define destination names
   if (!dir.exists(downloadfolder)) dir.create(downloadfolder)
-  dest_file <- paste0(downloadfolder, mapfile) #dest file
+  dest_file <- paste0(downloadfolder, basename) #dest file
   dest_file_unzipped <- str_sub(dest_file, 1, -5) #dest_file without zip extension
   
   #download the file
   if (file.exists(dest_file) || file.exists(dest_file_unzipped)) {
   cat(paste0(dest_file, " already exists, SKIPPING!\n"))} else {
   cat(paste0("Downloading to file ", dest_file))
-  download.file(url = paste0(link_prefix, mapfile),
+  download.file(url = paste0(link_prefix, basename),
                 destfile = dest_file,
                 method = "auto", 
                 cacheOK = TRUE,
@@ -52,8 +79,8 @@ safe_dl <- safely(function(link_prefix, mapfile, downloadfolder, extract = TRUE)
     }
   
   #unzip the file
-  if (str_detect(mapfile, "\\.zip$") && (file.exists(dest_file)) && extract){
-    cat(paste0(" -> Starting unzip of ", mapfile))
+  if (str_detect(basename, "\\.zip$") && (file.exists(dest_file)) && extract){
+    cat(paste0(" -> Starting unzip of ", basename))
     unzip(zipfile = dest_file, exdir = str_sub(downloadfolder, 1, -2)) # remove trailing slash to avoid error
     unlink(x = dest_file)
     if (file.exists(dest_file_unzipped)) {
@@ -61,6 +88,17 @@ safe_dl <- safely(function(link_prefix, mapfile, downloadfolder, extract = TRUE)
   }
 }
 )
+
+filter_regions <- function(filenames, regions) {
+  if (is.null(regions)) return(filenames)
+  files_per_region <- map(regions %>% set_names(), ~{
+    print(.x)
+    matched_files <- filenames %>% .[str_detect(., .x)]
+    if (length(matched_files) == 0) warning(paste("No files found for region", .x))
+    matched_files
+  })
+  files_per_region %>% unlist() %>% unname()
+}
 
 ############ PROGRAM ################
 #get the names of the mapfiles from the index pages
@@ -87,16 +125,17 @@ index_of_files <- list(
   )
 
 # download everything to local folder
-file_types <- c("maps", "srtm", "tiles") %>% set_names()  #change to decide what is copied
-local_root_folder <- "/Volumes/D/OSMdownloads/"
-local_folders <- map_chr(file_types, ~paste0(local_root_folder, .x))
-
-basenames <- map(file_types, ~index_of_files[.x])
-
+local_folders <- map_chr(file_type_suffixes, ~paste0(local_root_folder, .x))
+basenames <- map(file_types, ~{
+  index_of_files[[.x]] #%>% 
+   # filter_regions(regions_of_interest)
+  })
+  
 for (file_type in file_types){
+  print(paste("** Starting downloads of", file_type))
   link_prefix <-  remote_prefixes[file_type]
   downloadfolder <- local_folders[file_type]
-  for (basename in basenames[file_type]){
+  for (basename in basenames[[file_type]]){
     safe_dl(link_prefix, basename, downloadfolder)
   }
 }

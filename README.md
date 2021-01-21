@@ -12,14 +12,7 @@ or copied. Also by default, the scripts download map files, altitude lines and h
 those regions.
 
 ## Command line arguments
-
-* --all-regions: download all files instead of the ones in regions.txt
-* --no-maps: do not download maps files
-* --no-contours: do not download altitude files
-* --no-hillshade: do not download hillshade files
-
-* --local-dir <>: the local directory to which to download the files
-* --target-dir <> (copy_regions only, optional): the directory to which to copy the files from the local dir. Defaults to /Android/data/net.osmand/files
+Run `Rscript download_regions.R -h` to get an overview of commandline options
 
 ## After the run
 After copying the files to your SD card, install the free OSMand app and set the location of the

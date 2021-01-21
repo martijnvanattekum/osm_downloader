@@ -23,6 +23,11 @@ those regions.
 ## Command line arguments
 Run `Rscript download_regions.R -h` to get an overview of commandline options
 
+## regions.txt
+The regions.txt file resides in the same folder as the R script and contains one region that should
+be processed on each line. When a region occurs in the filename, that file is processed. This means
+that both `Belgium` and `europe` are valid regions. Note that the specified regions is case sensitive.
+
 ## After the run
 After copying the files to your SD card, install the free OSMand app and set the location of the
 files in its settings. This location requires to prefix the folder with the location of the SD card.

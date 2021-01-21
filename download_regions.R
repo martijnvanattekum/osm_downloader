@@ -9,6 +9,8 @@ suppressPackageStartupMessages({
   library(optparse)
 })
 
+source("base_functions.R")
+
 ############ CLA PARSING ################
 option_list <- list( 
   make_option(c("-a", "--all-regions"), action="store_true", default=FALSE,
@@ -33,13 +35,6 @@ local_root_folder <- opt["local-dir"]
 if (!opt[["all-regions"]]) regions_of_interest <- readLines("regions.txt") else regions_of_interest <- NULL
 
 ############ CONTANTS ################
-# the convention that osm uses
-file_type_suffixes <- c(
-  maps = "files/",
-  srtm = "files/srtm/",
-  tiles = "files/tiles/"
-)
-
 # websites where the index with all files can be found
 index_locations <- c(
   maps = "http://download.osmand.net/rawindexes/",
@@ -86,16 +81,6 @@ safe_dl <- safely(function(link_prefix, basename, downloadfolder, extract = TRUE
   }
 }
 )
-
-filter_regions <- function(filenames, regions) {
-  if (is.null(regions)) return(filenames)
-  files_per_region <- map(regions %>% set_names(), ~{
-    matched_files <- filenames %>% .[str_detect(., .x)]
-    if (length(matched_files) == 0) warning(paste("No files found for region", .x))
-    matched_files
-  })
-  files_per_region %>% unlist() %>% unname()
-}
 
 ############ PROGRAM ################
 #get the names of the mapfiles from the index pages

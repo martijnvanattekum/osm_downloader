@@ -8,6 +8,9 @@ suppressPackageStartupMessages({
   library(optparse)
 })
 
+source("base_functions.R")
+
+############ CLA PARSING ################
 option_list <- list( 
   make_option(c("-a", "--all-regions"), action="store_true", default=FALSE,
               help="Ignore regions.txt and download all regions"),

@@ -22,9 +22,12 @@ option_list <- list(
               help="Do not copy the hillshade files"),
   make_option(c("-l", "--local-dir"), type="character", default="./", 
               help="The local directory where the downloaded files are"),
-  make_option(c("-l", "--remote-dir"), type="character", 
+  make_option(c("-r", "--remote-dir"), type="character", 
               help="The remote directory to which the downloaded files will be copied.")
 )
+
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
 
 file_types <- c("maps", "srtm", "tiles") %>% 
   .[c(!opt[["no-maps"]], !opt[["no-contours"]], !opt[["no-hillshade"]])] %>% 
@@ -36,35 +39,34 @@ if (!opt[["all-regions"]]) regions_of_interest <- readLines("regions.txt") else 
 ############ FUNCTIONS ################
 # copy maps/contours/hillshades from source dir recursively to dest
 # only taking files from region(s) of interest (either countries or continents).
-copy_data <- function(src, dest, regions) {
+copy_file <- function(src, dest, filename) {
   if (!dir.exists(dest)) dir.create(dest, recursive = TRUE)
-  if (!dir.exists(src)) warning(paste("Source dir", src, "does not exist!"))
+  stopifnot(dir.exists(src)) 
   
-  files_in_scr_dir <- list.files(src, recursive = TRUE, full.names = TRUE)
-  files_to_copy_list <- map(regions %>% set_names(), ~{
-    detected_files <- files_in_scr_dir %>% .[str_detect(., .x)]
-    if (length(detected_files) == 0) warning(paste("No files found for region", .x))
-    detected_files
-  })
+  src_file <- paste0(src, filename)
+  dest_file <- paste0(dest, filename)
   
-  files_to_copy <- files_to_copy_list %>% unlist %>% unname()
-  
-  n_files <- length(files_to_copy)
-  iwalk(files_to_copy, ~{
-    cat(paste0("copying file ", .y, "/", n_files, " (", basename(.x), ")\n" ))
-    file.copy(.x, dest, overwrite = FALSE)})
-  
-  files_in_dest_dir <- list.files(dest)
-  scr_not_in_dest <- setdiff(basename(files_to_copy), files_in_dest_dir)
-  if (length(scr_not_in_dest) != 0) warning(paste("The following files were not copied:", scr_not_in_dest))
+  file.copy(src_file, dest_file, overwrite = FALSE)
 }
 
 ############ PROGRAM ################
+local_folders <- map_chr(file_type_suffixes, ~paste0(local_root_folder, .x))
+remote_folders <- map_chr(file_type_suffixes, ~paste0(remote_root_folder, .x))
 
+filenames_per_type <- map(file_types, ~{
+  list.files(local_folders[[.x]]) %>% 
+    filter_regions(regions_of_interest)
+})
 
+for (file_type in file_types){
+  cat(paste("** Starting copying of", file_type, "\n"))
+  local_folder <- local_folders[[file_type]]
+  remote_folder <- remote_folders[[file_type]]
+  filenames <- filenames_per_type[[file_type]]
+  n_files <- length(filenames)
+  iwalk(filenames, ~{
+    cat(paste0("copying file ", .y, "/", n_files, " (", basename(.x), ")\n" ))
+    copy_file(local_folder, remote_folder, .x)
+  })
+}
 
-# copy maps of interest
-walk2(local_folders, remote_folders, ~copy_data(.x, .y, regions_of_interest))
-
-
-copy_data(local_folders["srtm"], remote_folders["srtm"], regions_of_interest)

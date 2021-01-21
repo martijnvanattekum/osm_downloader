@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
 
 ############ CLA PARSING ################
 option_list <- list( 
-  make_option(c("-r", "--all-regions"), action="store_true", default=FALSE,
+  make_option(c("-a", "--all-regions"), action="store_true", default=FALSE,
               help="Ignore regions.txt and download all regions"),
   make_option(c("-m", "--no-maps"), action="store_true", default=FALSE,
               help="Do not download the map files"),
@@ -27,19 +27,15 @@ opt = parse_args(opt_parser)
 file_types <- c("maps", "srtm", "tiles") %>% 
   .[c(!opt[["no-maps"]], !opt[["no-contours"]], !opt[["no-hillshade"]])] %>% 
   set_names()
-
+local_root_folder <- opt["local-dir"]
 if (!opt[["all-regions"]]) regions_of_interest <- readLines("regions.txt") else regions_of_interest <- NULL
 
-stopifnot(FALSE)
-
-local_root_folder <- opt["local-dir"]
-local_root_folder <- "~/OSMtemp/" #for testing
 ############ CONTANTS ################
 # the convention that osm uses
 file_type_suffixes <- c(
-  maps = "files",
-  srtm = "files/srtm",
-  tiles = "files/tiles"
+  maps = "files/",
+  srtm = "files/srtm/",
+  tiles = "files/tiles/"
 )
 
 # websites where the index with all files can be found
@@ -61,7 +57,7 @@ remote_prefixes <- c(
 safe_dl <- safely(function(link_prefix, basename, downloadfolder, extract = TRUE){
   
   #create downloaddir and define destination names
-  if (!dir.exists(downloadfolder)) dir.create(downloadfolder)
+  if (!dir.exists(downloadfolder)) dir.create(downloadfolder, recursive = TRUE)
   dest_file <- paste0(downloadfolder, basename) #dest file
   dest_file_unzipped <- str_sub(dest_file, 1, -5) #dest_file without zip extension
   
@@ -92,7 +88,6 @@ safe_dl <- safely(function(link_prefix, basename, downloadfolder, extract = TRUE
 filter_regions <- function(filenames, regions) {
   if (is.null(regions)) return(filenames)
   files_per_region <- map(regions %>% set_names(), ~{
-    print(.x)
     matched_files <- filenames %>% .[str_detect(., .x)]
     if (length(matched_files) == 0) warning(paste("No files found for region", .x))
     matched_files
@@ -127,13 +122,13 @@ index_of_files <- list(
 # download everything to local folder
 local_folders <- map_chr(file_type_suffixes, ~paste0(local_root_folder, .x))
 basenames <- map(file_types, ~{
-  index_of_files[[.x]] #%>% 
-   # filter_regions(regions_of_interest)
+  index_of_files[[.x]] %>% 
+    filter_regions(regions_of_interest)
   })
   
 for (file_type in file_types){
-  print(paste("** Starting downloads of", file_type))
-  link_prefix <-  remote_prefixes[file_type]
+  cat(paste("** Starting downloads of", file_type, "\n"))
+  link_prefix <- remote_prefixes[file_type]
   downloadfolder <- local_folders[file_type]
   for (basename in basenames[[file_type]]){
     safe_dl(link_prefix, basename, downloadfolder)

@@ -14,10 +14,13 @@ library(rvest)
 library(tidyverse)
 
 ############ PARAMS ################
+setwd("/Volumes/D/Google Drive/CODE/repos/osm_downloader")
+regions_of_interest <- readLines("regions.txt")
+
+
 maps_index <- "http://download.osmand.net/rawindexes/"
 srtm_index <- "http://builder.osmand.net/srtm-countries/"
 hillshade_index <- "http://fides.fe.uni-lj.si/~arpadb/osmand/"
-regions <- c("africa", "asia", "australia-oceania", "basemap", "centralamerica", "europe", "northamerica", "southamerica")
 
 ############ FUNCTIONS ################
 #downloads file. If zip: by default also extracts the file, then deletes the zip file
@@ -110,12 +113,12 @@ map_files_functions <- list(
     html_table() %>% #convert to table format
     as_tibble %>%  #create tibble
     dplyr::filter(str_detect(Description, "Map")) %>% #filter actual map files
-    pull(File)  #pull file names
+    pull(File),  #pull file names
   
   srtm = read_html(srtm_index) %>% 
     html_nodes("a") %>% 
     html_attr('href') %>% 
-    .[str_detect(., "\\.srtm\\.obf") & !is.na(.)]
+    .[str_detect(., "\\.srtm\\.obf") & !is.na(.)],
   
   tiles = read_html(hillshade_index) %>%
     html_nodes("a") %>% 
@@ -155,10 +158,6 @@ remote_folders <- map_chr(file_types, ~paste0(remote_root_folder, .x))
 #walk(folders_to_sort, ~sort_by_region(sortdir = .x, regions = regions))
 
 dest_home <- "/Volumes/SD_200GB/Android/data/net.osmand/"
-regions_of_interest <- c("Andorra", "Austria", "Azores", "Belgium",  
-                           "Cyprus", "Faroe-islands", "France", "Germany", "Greece", "Isle-of-man", 
-                           "Italy", "Liechtenstein", "Luxembourg", "Malta", "Monaco", "Netherlands", 
-                           "Portugal", "San-marino", "Slovenia", "Spain", "Switzerland", "World")
 #regions_of_interest <- "europe"
 
 # copy maps of interest

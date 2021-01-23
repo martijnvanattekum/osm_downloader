@@ -13,15 +13,15 @@ source("base_functions.R")
 
 ############ CLA PARSING ################
 option_list <- list( 
-  make_option(c("-a", "--all-regions"), action="store_true", default=FALSE,
-              help="Ignore regions.txt and download all regions"),
   make_option(c("-m", "--no-maps"), action="store_true", default=FALSE,
               help="Do not download the map files"),
   make_option(c("-c", "--no-contours"), action="store_true", default=FALSE,
               help="Do not download the altitude lines files"),
   make_option(c("-t", "--no-hillshade"), action="store_true", default=FALSE,
               help="Do not download the hillshade files"),
-  make_option(c("-l", "--local-dir"), type="character", default="./", 
+  make_option(c("-r", "--regions-file"), type="character", default="./regions.txt", 
+              help="The local directory to which to download the files. Defaults to current directory"),
+  make_option(c("-l", "--local-dir"), type="character", default="~/OSM", 
               help="The local directory to which to download the files. Defaults to current directory")
 )
 
@@ -32,7 +32,7 @@ file_types <- c("maps", "srtm", "tiles") %>%
   .[c(!opt[["no-maps"]], !opt[["no-contours"]], !opt[["no-hillshade"]])] %>% 
   set_names()
 local_root_folder <- opt["local-dir"]
-if (!opt[["all-regions"]]) regions_of_interest <- readLines("regions.txt") else regions_of_interest <- NULL
+regions_of_interest <- readLines(opt[["regions-file"]])
 
 ############ CONTANTS ################
 # websites where the index with all files can be found

@@ -16,17 +16,24 @@ The following scripts can be used
 * Downloading (download_regions.R): downloads osm files to a local directory
 * Copying (copy_regions.R): copies files from local to remote directory. Typically used to copy the files to an SD card
 
-Both scripts by default read in the file `regions.txt`, which specifies which regions are downloaded
+Both scripts by default read in the specified regions-file (default: regions.txt in current working
+dir), which specifies which regions are downloaded
 or copied. Also by default, the scripts download map files, altitude lines and hillshades for
 those regions.
 
 ## Command line arguments
 Run `Rscript download_regions.R -h` to get an overview of commandline options
 
-## regions.txt
-The regions.txt file resides in the same folder as the R script and contains one region that should
-be processed on each line. When a region occurs in the filename, that file is processed. This means
-that both `Belgium` and `europe` are valid regions. Note that the specified regions is case sensitive.
+## regions file
+The regions  contains one region that should be processed on each line. When a region occurs in the filename, that file is processed. The filenames for the maps can for example be found [here](https://download.osmand.net/list.php). Given the composition of the file names, multiple
+levels of regions can be used, for example:
+
+* `Belgium`: processes all Belgian maps
+* `europe`: processes all maps from european countries (including Belgium, Germany, etc)
+* `_`: processes all maps available, as each name contains at least an underscore
+
+Note that the specified regions is case sensitive and the country names are written with a capital
+whereas the continent names start with a lower case.
 
 ## After the run
 After copying the files to your SD card, install the free OSMand app and set the location of the

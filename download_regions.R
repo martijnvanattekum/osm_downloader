@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
   library(rvest)
   library(dplyr)
   library(purrr)
+  library(fs)
   library(stringr)
   library(optparse)
 })
@@ -20,19 +21,20 @@ option_list <- list(
   make_option(c("-t", "--no-hillshade"), action="store_true", default=FALSE,
               help="Do not download the hillshade files"),
   make_option(c("-r", "--regions-file"), type="character", default="./regions.txt", 
-              help="The local directory to which to download the files. Defaults to current directory"),
-  make_option(c("-l", "--local-dir"), type="character", default="~/OSM", 
-              help="The local directory to which to download the files. Defaults to current directory")
+              help="The path to the regions file. Defaults to regions.txt in the current directory"),
+  make_option(c("-l", "--local-dir"), type="character", default="~/osm_downloads", 
+              help="The local directory to which to download the files. Defaults to ~/osm_downloads")
 )
 
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-file_types <- c("maps", "srtm", "tiles") %>% 
+file_types_to_process <- c("maps", "srtm", "tiles") %>% 
   .[c(!opt[["no-maps"]], !opt[["no-contours"]], !opt[["no-hillshade"]])] %>% 
   set_names()
-local_root_folder <- opt["local-dir"]
 regions_of_interest <- readLines(opt[["regions-file"]])
+
+cat(paste0("** Preparing download of ", paste(file_types_to_process, collapse=", "),".\n"))
 
 ############ CONTANTS ################
 # websites where the index with all files can be found
@@ -54,12 +56,12 @@ remote_prefixes <- c(
 safe_dl <- safely(function(link_prefix, basename, downloadfolder, extract = TRUE){
   
   #create downloaddir and define destination names
-  if (!dir.exists(downloadfolder)) dir.create(downloadfolder, recursive = TRUE)
-  dest_file <- paste0(downloadfolder, basename) #dest file
-  dest_file_unzipped <- str_sub(dest_file, 1, -5) #dest_file without zip extension
+  fs::dir_create(downloadfolder)
+  dest_file <- path(downloadfolder, basename) #dest file
+  dest_file_unzipped <- path_ext_remove(dest_file) #dest_file without zip extension
   
   #download the file
-  if (file.exists(dest_file) || file.exists(dest_file_unzipped)) {
+  if (fs::file_exists(dest_file) || fs::file_exists(dest_file_unzipped)) {
   cat(paste0(dest_file, " already exists, SKIPPING!\n"))} else {
   cat(paste0("Downloading to file ", dest_file))
   download.file(url = paste0(link_prefix, basename),
@@ -67,16 +69,16 @@ safe_dl <- safely(function(link_prefix, basename, downloadfolder, extract = TRUE
                 method = "auto", 
                 cacheOK = TRUE,
                 quiet = TRUE)
-    if (file.exists(dest_file)) {
+    if (fs::file_exists(dest_file)) {
       cat(" -- FINISHED!\n")} else {cat(" -- FAILED!\n")}
     }
   
   #unzip the file
-  if (str_detect(basename, "\\.zip$") && (file.exists(dest_file)) && extract){
+  if (path_ext(basename) == "zip" && (fs::file_exists(dest_file)) && extract){
     cat(paste0(" -> Starting unzip of ", basename))
-    unzip(zipfile = dest_file, exdir = str_sub(downloadfolder, 1, -2)) # remove trailing slash to avoid error
+    unzip(zipfile = dest_file, exdir = downloadfolder)
     unlink(x = dest_file)
-    if (file.exists(dest_file_unzipped)) {
+    if (fs::file_exists(dest_file_unzipped)) {
       cat(" -- FINISHED!\n")} else {cat(" -- FAILED!\n")}
   }
 }
@@ -107,13 +109,16 @@ index_of_files <- list(
   )
 
 # download everything to local folder
-local_folders <- map_chr(file_type_suffixes, ~paste0(local_root_folder, .x))
-basenames <- map(file_types, ~{
+local_folders <- opt["local-dir"] %>% 
+  path(file_type_suffixes) %>% 
+  set_names(names(file_type_suffixes))
+  
+basenames <- map(file_types_to_process, ~{
   index_of_files[[.x]] %>% 
     filter_regions(regions_of_interest)
   })
   
-for (file_type in file_types){
+for (file_type in file_types_to_process){
   cat(paste("** Starting downloads of", file_type, "\n"))
   link_prefix <- remote_prefixes[file_type]
   downloadfolder <- local_folders[file_type]

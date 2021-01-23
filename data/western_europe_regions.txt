@@ -2,11 +2,9 @@ Andorra
 Austria
 Azores
 Belgium
-Cyprus
-Faroe-islands
+Czech
 France
 Germany
-Greece
 Isle-of-man
 Italy
 Liechtenstein
@@ -19,4 +17,5 @@ San-marino
 Slovenia
 Spain
 Switzerland
+United Kingdom
 World
